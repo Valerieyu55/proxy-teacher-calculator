@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="代導計算">
+    <link rel="manifest" href="manifest.json">
+    <title>代導費用</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/airbnb.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/zh-tw.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="iphone-frame">
+        <div class="iphone-screen glassy-bg">
+            <!-- iOS Status Bar & Dynamic Island -->
+            <div class="status-bar">
+                <span class="time" id="clock">9:41</span>
+                <div class="dynamic-island"></div>
+                <div class="status-icons">
+                    <i class="ph-fill ph-cell-signal-full"></i>
+                    <i class="ph-fill ph-wifi-high"></i>
+                    <i class="ph-fill ph-battery-full"></i>
+                </div>
+            </div>
+
+            <!-- App Content -->
+            <div class="ios-app">
+                <header class="glass-header">
+                    <h1 class="large-title">代導費用</h1>
+                    <button id="open-settings-btn" class="glass-icon-btn"><i class="ph-bold ph-calendar-blank"></i> 區間設定</button>
+                </header>
+
+                <main class="ios-content" id="list-container">
+                    <div class="glass-panel range-info-panel">
+                        <span class="range-display" id="range-display">載入中...</span>
+                        <div class="toggle-container">
+                            <span class="toggle-label">假日</span>
+                            <label class="ios-switch">
+                                <input type="checkbox" id="show-weekend">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Bulk Actions -->
+                    <div id="bulk-actions" class="hidden mt-3">
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="bulk-all-day-btn" class="glass-btn" style="flex: 1; padding: 0.8rem 0.5rem; font-size: 0.9rem;"><i class="ph-bold ph-check-square-offset"></i> 全區段全天並儲存</button>
+                            <button id="bulk-reset-btn" class="glass-btn" style="flex: 1; padding: 0.8rem 0.5rem; font-size: 0.9rem; color: var(--danger);"><i class="ph-bold ph-arrow-counter-clockwise"></i> 全區段重置</button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic List of Dates injected here -->
+                    <div id="dates-list" class="mt-4"></div>
+                    <div style="height: 120px;"></div> <!-- Padding for bottom bar -->
+                </main>
+
+                <!-- Bottom Floating Bar -->
+                <div class="glass-bottom-bar">
+                    <div class="total-info">
+                        <span class="total-label">總計</span>
+                        <span class="total-amount" id="grand-total">$0</span>
+                    </div>
+                    <button id="export-btn" class="solid-white-btn"><i class="ph-bold ph-export"></i> 匯出明細</button>
+                </div>
+            </div>
+
+            <!-- Settings Sheet Modal -->
+            <div id="sheet-overlay" class="glass-overlay"></div>
+            <div id="settings-sheet" class="glass-sheet">
+                <div class="sheet-handle"></div>
+                <div class="sheet-header">
+                    <button id="close-settings-btn" class="sheet-btn">取消</button>
+                    <h2>設定</h2>
+                    <button id="save-settings-btn" class="sheet-btn primary">完成</button>
+                </div>
+                
+                <div class="sheet-body">
+                    <h3 class="group-title">選擇日期或區間</h3>
+                    <div class="calendar-container mt-2 mb-3" style="display: flex; justify-content: center;">
+                        <input type="text" id="unified-date-picker" style="display: none;">
+                    </div>
+                    
+                    <h3 class="group-title mt-4">費用參考</h3>
+                    <div class="glass-list-group">
+                        <div class="glass-list-row"><span>早修/午休</span><span class="val">$200</span></div>
+                        <div class="glass-list-row"><span>大下課/MH節</span><span class="val">$50</span></div>
+                        <div class="glass-list-row"><span>全天</span><span class="val highlight">$550</span></div>
+                    </div>
+
+                    <button id="clear-all-btn" class="glass-danger-btn mt-4"><i class="ph-bold ph-trash"></i> 清除所有紀錄</button>
+                </div>
+            </div>
+
+            <!-- Export Action Sheet -->
+            <div id="export-action-sheet" class="glass-sheet action-sheet">
+                <div class="sheet-body action-body">
+                    <h3 class="group-title" style="text-align: center; margin: 8px 0 16px 0;">選擇匯出範圍</h3>
+                    <div class="glass-segmented mb-3">
+                        <input type="radio" name="export-scope" id="scope-custom" value="custom" checked>
+                        <label for="scope-custom" class="seg-btn">指定區間</label>
+                        <input type="radio" name="export-scope" id="scope-all" value="all">
+                        <label for="scope-all" class="seg-btn">所有已儲存</label>
+                        <div class="seg-indicator"></div>
+                    </div>
+
+                    <div id="export-calendar-container" class="calendar-container mb-3" style="display: flex; justify-content: center;">
+                        <input type="text" id="export-date-picker" style="display: none;">
+                    </div>
+
+                    <button id="share-line-btn" class="action-btn text-line"><i class="ph-fill ph-chat-circle-text"></i> 傳送到 LINE</button>
+                    <button id="copy-text-btn" class="action-btn"><i class="ph-bold ph-copy"></i> 複製文字明細</button>
+                    <button id="native-share-btn" class="action-btn"><i class="ph-bold ph-share-network"></i> 其他分享方式</button>
+                    <button id="cancel-action-btn" class="action-btn cancel-btn mt-2">取消</button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Date Card Template -->
+    <template id="date-card-template">
+        <div class="date-card glass-card">
+            <div class="card-top">
+                <div class="title-wrap">
+                    <div class="date-title"></div>
+                    <div class="confirmed-badge hidden"><i class="ph-bold ph-check"></i> 已儲存</div>
+                </div>
+                <div class="date-total">$0</div>
+            </div>
+            
+            <div class="card-body">
+                <div class="fee-row all-day-row">
+                    <span>全天代導 <span class="badge">$550</span></span>
+                    <label class="ios-switch all-day">
+                        <input type="checkbox" class="all-day-cb" value="550">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <div class="fee-row">
+                    <span>早修 <span class="badge">$200</span></span>
+                    <label class="ios-switch">
+                        <input type="checkbox" class="fee-cb" data-type="early" value="200">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="fee-row">
+                    <span>上大下 <span class="badge">$50</span></span>
+                    <label class="ios-switch">
+                        <input type="checkbox" class="fee-cb" data-type="m1" value="50">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="fee-row">
+                    <span>MH節 <span class="badge">$50</span></span>
+                    <label class="ios-switch">
+                        <input type="checkbox" class="fee-cb" data-type="mh" value="50">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="fee-row">
+                    <span>午休 <span class="badge">$200</span></span>
+                    <label class="ios-switch">
+                        <input type="checkbox" class="fee-cb" data-type="lunch" value="200">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="fee-row">
+                    <span>下大下 <span class="badge">$50</span></span>
+                    <label class="ios-switch">
+                        <input type="checkbox" class="fee-cb" data-type="m2" value="50">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <div class="fee-row">
+                    <span>H 導師時間 <span class="badge">$550</span></span>
+                    <label class="ios-switch">
+                        <input type="checkbox" class="extra-cb" data-type="htime_h" value="550">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="fee-row">
+                    <span>M 導師時間 <span class="badge">$450</span></span>
+                    <label class="ios-switch">
+                        <input type="checkbox" class="extra-cb" data-type="htime_m" value="450">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="card-actions mt-3">
+                    <button class="glass-btn confirm-record-btn w-100">儲存此筆紀錄</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="script.js"></script>
+</body>
+</html>
