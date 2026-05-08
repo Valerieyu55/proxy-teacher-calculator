@@ -106,6 +106,20 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     }
 
+    // Date Helpers
+    function parseLocalString(dateStr) {
+        if (!dateStr) return new Date();
+        const parts = dateStr.split('-');
+        return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    }
+
+    function toLocalString(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
     // Render logic
     function renderList(startDate, endDate) {
         const template = document.getElementById('date-card-template');
@@ -118,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const days = ['日', '一', '二', '三', '四', '五', '六'];
 
         while (currentDate <= endDate) {
-            const dateStr = currentDate.toISOString().split('T')[0];
+            const dateStr = toLocalString(currentDate);
             const dayOfWeek = currentDate.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             
@@ -547,12 +561,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             text = `代導費用結算\n期間: ${formatDateStr(exportStart)} ~ ${formatDateStr(exportEnd)}\n\n`;
             
-            let curr = new Date(startStr);
-            let end = new Date(endStr);
+            let curr = new Date(exportStart);
+            curr.setHours(0,0,0,0);
+            let end = new Date(exportEnd);
+            end.setHours(23,59,59,999);
             
             const datesToExport = [];
             while (curr <= end) {
-                datesToExport.push(curr.toISOString().split('T')[0]);
+                datesToExport.push(toLocalString(curr));
                 curr.setDate(curr.getDate() + 1);
             }
             
@@ -561,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (record && record.total > 0 && record.confirmed) {
                     hasData = true;
-                    const d = new Date(dateStr);
+                    const d = parseLocalString(dateStr);
                     const dateText = `${d.getMonth() + 1}/${d.getDate()} (${days[d.getDay()]})`;
                     const cardTotal = record.total;
                     
@@ -591,8 +607,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (record && record.total > 0 && record.confirmed) {
                     hasData = true;
                     
-                    // Construct localized date
-                    const d = new Date(dateStr);
+                    // Construct localized date safely
+                    const d = parseLocalString(dateStr);
                     const dateText = `${d.getMonth() + 1}/${d.getDate()} (${days[d.getDay()]})`;
                     
                     const cardTotal = record.total;
