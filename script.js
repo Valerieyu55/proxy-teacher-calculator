@@ -33,7 +33,18 @@ document.addEventListener('DOMContentLoaded', () => {
         inline: true,
         dateFormat: "Y-m-d",
         locale: "zh_tw",
-        disableMobile: "true" // Use flatpickr UI even on mobile
+        disableMobile: "true",
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+            const records = getSavedRecords();
+            const date = dayElem.dateObj;
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            if (records[dateStr] && records[dateStr].total > 0 && records[dateStr].confirmed) {
+                dayElem.classList.add('has-record');
+            }
+        }
     });
 
     // Initialize
@@ -59,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Modal logic
     function openSheet() {
+        datePickerInstance.redraw();
         sheetOverlay.classList.add('active');
         settingsSheet.classList.add('active');
     }
@@ -497,7 +509,18 @@ document.addEventListener('DOMContentLoaded', () => {
         inline: true,
         dateFormat: "Y-m-d",
         locale: "zh_tw",
-        disableMobile: "true"
+        disableMobile: "true",
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+            const records = getSavedRecords();
+            const date = dayElem.dateObj;
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            if (records[dateStr] && records[dateStr].total > 0 && records[dateStr].confirmed) {
+                dayElem.classList.add('has-record');
+            }
+        }
     });
 
     function updateExportScopeUI() {
@@ -515,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selected.length > 0) {
             exportDatePickerInstance.setDate(selected);
         }
+        exportDatePickerInstance.redraw();
         scopeCustom.checked = true;
         updateExportScopeUI();
         
