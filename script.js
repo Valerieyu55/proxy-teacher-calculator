@@ -1,16 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
     const unifiedDatePicker = document.getElementById('unified-date-picker');
-    const rangeDisplay = document.getElementById('range-display');
     const datesListContainer = document.getElementById('dates-list');
     const grandTotalEl = document.getElementById('grand-total');
     
-    // Sheet Elements
-    const openSettingsBtn = document.getElementById('open-settings-btn');
-    const closeSettingsBtn = document.getElementById('close-settings-btn');
-    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    // Controls
     const sheetOverlay = document.getElementById('sheet-overlay');
-    const settingsSheet = document.getElementById('settings-sheet');
     const clearAllBtn = document.getElementById('clear-all-btn');
     const exportBtn = document.getElementById('export-btn');
     const showWeekendToggle = document.getElementById('show-weekend');
@@ -34,6 +29,19 @@ document.addEventListener('DOMContentLoaded', () => {
         dateFormat: "Y-m-d",
         locale: "zh_tw",
         disableMobile: "true",
+        onChange: function(selectedDates, dateStr, instance) {
+            if (selectedDates.length > 0) {
+                const start = selectedDates[0];
+                const end = selectedDates.length === 2 ? selectedDates[1] : selectedDates[0];
+                
+                const startStr = toLocalString(start);
+                const endStr = toLocalString(end);
+                
+                localStorage.setItem(SETTINGS_KEY, JSON.stringify({ start: startStr, end: endStr }));
+                
+                renderList(start, end);
+            }
+        },
         onDayCreate: function(dObj, dStr, fp, dayElem) {
             const records = getSavedRecords();
             const date = dayElem.dateObj;
@@ -57,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentStart = savedSettings.start;
         currentEnd = savedSettings.end;
     } else if (savedSettings.singleDate) {
-        // Fallback for old save format
         currentStart = savedSettings.singleDate;
         currentEnd = savedSettings.singleDate;
     } else {
@@ -66,46 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     datePickerInstance.setDate([currentStart, currentEnd]);
-    renderList(new Date(currentStart), new Date(currentEnd));
-
-    // Modal logic
-    function openSheet() {
-        datePickerInstance.redraw();
-        sheetOverlay.classList.add('active');
-        settingsSheet.classList.add('active');
-    }
-    function closeSheet() {
-        sheetOverlay.classList.remove('active');
-        settingsSheet.classList.remove('active');
-    }
-
-    openSettingsBtn.addEventListener('click', openSheet);
-    closeSettingsBtn.addEventListener('click', closeSheet);
-    sheetOverlay.addEventListener('click', closeSheet);
-
-    saveSettingsBtn.addEventListener('click', () => {
-        const selectedDates = datePickerInstance.selectedDates;
-        if (selectedDates.length === 0) {
-            alert('請選擇有效日期');
-            return;
-        }
-        
-        const start = selectedDates[0];
-        const end = selectedDates.length === 2 ? selectedDates[1] : selectedDates[0];
-        
-        const formatLocal = (d) => {
-            const tzOffset = d.getTimezoneOffset() * 60000;
-            return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
-        };
-        
-        const startStr = formatLocal(start);
-        const endStr = formatLocal(end);
-        
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify({ start: startStr, end: endStr }));
-        
-        renderList(start, end);
-        closeSheet();
-    });
+    renderList(parseLocalString(currentStart), parseLocalString(currentEnd));
 
     // Data Management
     function getSavedRecords() {
@@ -135,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render logic
     function renderList(startDate, endDate) {
         const template = document.getElementById('date-card-template');
-        rangeDisplay.textContent = `${formatDateStr(startDate)} ~ ${formatDateStr(endDate)}`;
 
         datesListContainer.innerHTML = '';
         const records = getSavedRecords();
@@ -272,6 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     confirmBtn.classList.remove('active');
                     confirmBtn.innerHTML = '儲存此筆紀錄';
                 }
+                
+                // Redraw main calendar to update dots when status changes
+                datePickerInstance.redraw();
             };
 
             confirmBtn.addEventListener('click', () => {
@@ -292,6 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 confirmBtn.classList.remove('active');
                 confirmBtn.classList.add('confirmed');
                 confirmBtn.innerHTML = '已儲存';
+                
+                // Redraw main calendar to add dot
+                datePickerInstance.redraw();
             });
 
             // Individual switches
@@ -465,6 +438,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+            // Update calendar dots
+            datePickerInstance.redraw();
+            
             // updateGrandTotal gets called by events, but good to ensure
             let grandTotal = 0;
             document.querySelectorAll('.date-total').forEach(el => {
@@ -486,8 +462,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const end = selectedDates.length === 2 ? selectedDates[1] : selectedDates[0];
                 renderList(start, end);
             }
+            datePickerInstance.redraw();
             
-            closeSheet();
             alert('已清除所有紀錄');
         }
     });
@@ -554,9 +530,8 @@ document.addEventListener('DOMContentLoaded', () => {
     exportBtn.addEventListener('click', openExportSheet);
     cancelActionBtn.addEventListener('click', closeExportSheet);
     
-    // Make overlay close either sheet
+    // Make overlay close export sheet
     sheetOverlay.addEventListener('click', () => {
-        closeSheet();
         closeExportSheet();
     });
 

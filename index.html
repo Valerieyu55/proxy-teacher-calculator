@@ -39,26 +39,29 @@
             <div class="ios-app">
                 <header class="glass-header">
                     <h1 class="large-title">代導費用</h1>
-                    <button id="open-settings-btn" class="glass-icon-btn"><i class="ph-bold ph-calendar-blank"></i> 區間設定</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="clear-all-btn" class="glass-icon-btn" style="color: var(--danger);"><i class="ph-bold ph-trash"></i> 清空</button>
+                    </div>
                 </header>
 
                 <main class="ios-content" id="list-container">
-                    <div class="glass-panel range-info-panel">
-                        <span class="range-display" id="range-display">載入中...</span>
-                        <div class="toggle-container">
+                    <!-- Main Calendar -->
+                    <div class="calendar-container mb-3 mt-2" style="display: flex; justify-content: center;">
+                        <input type="text" id="unified-date-picker" style="display: none;">
+                    </div>
+
+                    <!-- Controls & Bulk Actions -->
+                    <div class="glass-panel range-info-panel mb-3" style="padding: 12px 16px;">
+                        <div id="bulk-actions" class="hidden" style="display: flex; gap: 8px; flex: 1;">
+                            <button id="bulk-all-day-btn" class="glass-btn" style="flex: 1; padding: 8px; font-size: 13px; margin: 0;"><i class="ph-bold ph-check-square-offset"></i> 一鍵全天</button>
+                            <button id="bulk-reset-btn" class="glass-danger-btn" style="flex: 1; padding: 8px; font-size: 13px; margin: 0;"><i class="ph-bold ph-arrow-counter-clockwise"></i> 全區重置</button>
+                        </div>
+                        <div class="toggle-container" style="margin-left: 12px;">
                             <span class="toggle-label">假日</span>
                             <label class="ios-switch">
                                 <input type="checkbox" id="show-weekend">
                                 <span class="slider"></span>
                             </label>
-                        </div>
-                    </div>
-
-                    <!-- Bulk Actions -->
-                    <div id="bulk-actions" class="hidden mt-3">
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button id="bulk-all-day-btn" class="glass-btn" style="flex: 1; padding: 0.8rem 0.5rem; font-size: 0.9rem;"><i class="ph-bold ph-check-square-offset"></i> 全區段全天並儲存</button>
-                            <button id="bulk-reset-btn" class="glass-btn" style="flex: 1; padding: 0.8rem 0.5rem; font-size: 0.9rem; color: var(--danger);"><i class="ph-bold ph-arrow-counter-clockwise"></i> 全區段重置</button>
                         </div>
                     </div>
 
@@ -74,33 +77,6 @@
                         <span class="total-amount" id="grand-total">$0</span>
                     </div>
                     <button id="export-btn" class="solid-white-btn"><i class="ph-bold ph-export"></i> 匯出明細</button>
-                </div>
-            </div>
-
-            <!-- Settings Sheet Modal -->
-            <div id="sheet-overlay" class="glass-overlay"></div>
-            <div id="settings-sheet" class="glass-sheet">
-                <div class="sheet-handle"></div>
-                <div class="sheet-header">
-                    <button id="close-settings-btn" class="sheet-btn">取消</button>
-                    <h2>設定</h2>
-                    <button id="save-settings-btn" class="sheet-btn primary">完成</button>
-                </div>
-                
-                <div class="sheet-body">
-                    <h3 class="group-title">選擇日期或區間</h3>
-                    <div class="calendar-container mt-2 mb-3" style="display: flex; justify-content: center;">
-                        <input type="text" id="unified-date-picker" style="display: none;">
-                    </div>
-                    
-                    <h3 class="group-title mt-4">費用參考</h3>
-                    <div class="glass-list-group">
-                        <div class="glass-list-row"><span>早修/午休</span><span class="val">$200</span></div>
-                        <div class="glass-list-row"><span>大下課/MH節</span><span class="val">$50</span></div>
-                        <div class="glass-list-row"><span>全天</span><span class="val highlight">$550</span></div>
-                    </div>
-
-                    <button id="clear-all-btn" class="glass-danger-btn mt-4"><i class="ph-bold ph-trash"></i> 清除所有紀錄</button>
                 </div>
             </div>
 
