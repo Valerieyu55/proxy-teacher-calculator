@@ -468,19 +468,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Export logic using Action Sheet
-    const exportActionSheet = document.getElementById('export-action-sheet');
-    const shareLineBtn = document.getElementById('share-line-btn');
-    const copyTextBtn = document.getElementById('copy-text-btn');
+    // ─── Preview Sheet (unified) ───────────────────────────────────────────
+    const previewActionSheet  = document.getElementById('preview-action-sheet');
+    const previewCloseBtn     = document.getElementById('preview-close-btn');
+    const previewScopeAll     = document.getElementById('preview-scope-all');
+    const previewScopeCustom  = document.getElementById('preview-scope-custom');
+    const previewCalendarContainer = document.getElementById('preview-calendar-container');
+    const previewRecordsList  = document.getElementById('preview-records-list');
+    const previewTotalAmount  = document.getElementById('preview-total-amount');
+    const previewDateRange    = document.getElementById('preview-date-range');
+    const previewEmptyState   = document.getElementById('preview-empty-state');
+    const previewShareSection = document.getElementById('preview-share-section');
+    const shareLineBtn   = document.getElementById('share-line-btn');
+    const copyTextBtn    = document.getElementById('copy-text-btn');
     const nativeShareBtn = document.getElementById('native-share-btn');
-    const cancelActionBtn = document.getElementById('cancel-action-btn');
 
-    const exportDatePickerEl = document.getElementById('export-date-picker');
-    const exportCalendarContainer = document.getElementById('export-calendar-container');
-    const scopeCustom = document.getElementById('scope-custom');
-    const scopeAll = document.getElementById('scope-all');
-    
-    let exportDatePickerInstance = flatpickr(exportDatePickerEl, {
+    // Inline calendar inside the preview sheet
+    let previewDatePickerInstance = flatpickr(document.getElementById('preview-date-picker'), {
         mode: "range",
         inline: true,
         dateFormat: "Y-m-d",
@@ -496,181 +500,244 @@ document.addEventListener('DOMContentLoaded', () => {
             if (records[dateStr] && records[dateStr].total > 0 && records[dateStr].confirmed) {
                 dayElem.classList.add('has-record');
             }
+        },
+        onChange: function() {
+            // Re-render whenever dates change while in custom mode
+            if (previewScopeCustom.checked) {
+                refreshPreview();
+            }
         }
     });
 
-    function updateExportScopeUI() {
-        if (scopeCustom.checked) {
-            exportCalendarContainer.classList.remove('hidden');
-        } else {
-            exportCalendarContainer.classList.add('hidden');
-        }
-    }
-    scopeCustom.addEventListener('change', updateExportScopeUI);
-    scopeAll.addEventListener('change', updateExportScopeUI);
-
-    function openExportSheet() {
+    // Scope toggle → show/hide calendar + re-render
+    previewScopeAll.addEventListener('change', () => {
+        previewCalendarContainer.style.display = 'none';
+        refreshPreview();
+    });
+    previewScopeCustom.addEventListener('change', () => {
+        previewCalendarContainer.style.display = 'flex';
+        // Pre-select the currently active date range from the main calendar
         const selected = datePickerInstance.selectedDates;
         if (selected.length > 0) {
-            exportDatePickerInstance.setDate(selected);
+            previewDatePickerInstance.setDate(selected);
         }
-        exportDatePickerInstance.redraw();
-        scopeCustom.checked = true;
-        updateExportScopeUI();
-        
-        sheetOverlay.classList.add('active');
-        exportActionSheet.classList.add('active');
-    }
-
-    function closeExportSheet() {
-        sheetOverlay.classList.remove('active');
-        exportActionSheet.classList.remove('active');
-    }
-
-    exportBtn.addEventListener('click', openExportSheet);
-    cancelActionBtn.addEventListener('click', closeExportSheet);
-    
-    // Make overlay close export sheet
-    sheetOverlay.addEventListener('click', () => {
-        closeExportSheet();
+        previewDatePickerInstance.redraw();
+        refreshPreview();
     });
 
-    function getExportText() {
-        const scope = document.querySelector('input[name="export-scope"]:checked').value;
+    function openPreviewSheet() {
+        // Reset to "全部" scope
+        previewScopeAll.checked = true;
+        previewCalendarContainer.style.display = 'none';
+        previewDatePickerInstance.clear();
+        previewDatePickerInstance.redraw();
+
+        refreshPreview();
+        sheetOverlay.classList.add('active');
+        previewActionSheet.classList.add('active');
+    }
+
+    function closePreviewSheet() {
+        previewActionSheet.classList.remove('active');
+        sheetOverlay.classList.remove('active');
+    }
+
+    sheetOverlay.addEventListener('click', closePreviewSheet);
+    previewCloseBtn.addEventListener('click', closePreviewSheet);
+    exportBtn.addEventListener('click', openPreviewSheet);
+
+    // Build data for current scope
+    function buildPreviewData() {
+        const scope = document.querySelector('input[name="preview-scope"]:checked').value;
         const records = getSavedRecords();
+        const days = ['日', '一', '二', '三', '四', '五', '六'];
+        const items = [];
         let total = 0;
-        let hasData = false;
-        let text = '';
+        let rangeLabel = '';
+
+        if (scope === 'custom') {
+            const selectedDates = previewDatePickerInstance.selectedDates;
+            if (selectedDates.length === 0) return { items: [], total: 0, rangeLabel: '請先選擇區間' };
+
+            const exportStart = selectedDates[0];
+            const exportEnd   = selectedDates.length === 2 ? selectedDates[1] : selectedDates[0];
+            rangeLabel = `${formatDateStr(exportStart)} ~ ${formatDateStr(exportEnd)}`;
+
+            let curr = new Date(exportStart);
+            curr.setHours(0, 0, 0, 0);
+            const end = new Date(exportEnd);
+            end.setHours(23, 59, 59, 999);
+
+            while (curr <= end) {
+                const dateStr = toLocalString(curr);
+                const record  = records[dateStr];
+                if (record && record.total > 0 && record.confirmed) {
+                    items.push(buildRecordItem(dateStr, record, days));
+                    total += record.total;
+                }
+                curr.setDate(curr.getDate() + 1);
+            }
+        } else {
+            rangeLabel = '所有已儲存紀錄';
+            Object.keys(records).sort().forEach(dateStr => {
+                const record = records[dateStr];
+                if (record && record.total > 0 && record.confirmed) {
+                    items.push(buildRecordItem(dateStr, record, days));
+                    total += record.total;
+                }
+            });
+        }
+
+        return { items, total, rangeLabel };
+    }
+
+    function buildRecordItem(dateStr, record, days) {
+        const d = parseLocalString(dateStr);
+        const dateText = `${d.getMonth() + 1}/${d.getDate()} (${days[d.getDay()]})`;
+        let details = [];
+        if (record.allDay) {
+            details.push('全天');
+        } else {
+            if (record.early) details.push('早修');
+            if (record.m1)    details.push('上大');
+            if (record.mh)    details.push('MH');
+            if (record.lunch) details.push('午休');
+            if (record.m2)    details.push('下大');
+        }
+        if (record.htime_h) details.push('H導');
+        if (record.htime_m) details.push('M導');
+        return { dateText, details, total: record.total };
+    }
+
+    function refreshPreview() {
+        const data = buildPreviewData();
+        previewDateRange.textContent    = data.rangeLabel;
+        previewTotalAmount.textContent  = `$${data.total.toLocaleString()}`;
+        previewRecordsList.innerHTML    = '';
+
+        const hasItems = data.items.length > 0;
+        previewEmptyState.style.display  = hasItems ? 'none' : 'flex';
+        previewShareSection.style.display = hasItems ? 'flex' : 'none';
+
+        data.items.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'preview-record-row';
+            row.innerHTML = `
+                <div class="preview-record-left">
+                    <span class="preview-record-date">${item.dateText}</span>
+                    <span class="preview-record-tags">${item.details.map(d => `<span class="preview-tag">${d}</span>`).join('')}</span>
+                </div>
+                <span class="preview-record-amount">$${item.total.toLocaleString()}</span>
+            `;
+            previewRecordsList.appendChild(row);
+        });
+    }
+
+    // ─── Export text generator ─────────────────────────────────────────────
+    function getExportText() {
+        const scope   = document.querySelector('input[name="preview-scope"]:checked').value;
+        const records = getSavedRecords();
+        let total = 0, hasData = false, text = '';
         const days = ['日', '一', '二', '三', '四', '五', '六'];
 
         if (scope === 'custom') {
-            const selectedDates = exportDatePickerInstance.selectedDates;
+            const selectedDates = previewDatePickerInstance.selectedDates;
             if (selectedDates.length === 0) return null;
-            
-            let exportStart = selectedDates[0];
-            let exportEnd = selectedDates.length === 2 ? selectedDates[1] : selectedDates[0];
-            
-            const formatLocal = (d) => {
-                const tzOffset = d.getTimezoneOffset() * 60000;
-                return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
-            };
-            
-            const startStr = formatLocal(exportStart);
-            const endStr = formatLocal(exportEnd);
-            
+
+            const exportStart = selectedDates[0];
+            const exportEnd   = selectedDates.length === 2 ? selectedDates[1] : selectedDates[0];
             text = `代導費用結算\n期間: ${formatDateStr(exportStart)} ~ ${formatDateStr(exportEnd)}\n\n`;
-            
+
             let curr = new Date(exportStart);
-            curr.setHours(0,0,0,0);
-            let end = new Date(exportEnd);
-            end.setHours(23,59,59,999);
-            
-            const datesToExport = [];
+            curr.setHours(0, 0, 0, 0);
+            const end = new Date(exportEnd);
+            end.setHours(23, 59, 59, 999);
             while (curr <= end) {
-                datesToExport.push(toLocalString(curr));
+                const dateStr = toLocalString(curr);
+                const record  = records[dateStr];
+                if (record && record.total > 0 && record.confirmed) {
+                    hasData = true;
+                    const d = parseLocalString(dateStr);
+                    const dateText = `${d.getMonth() + 1}/${d.getDate()} (${days[d.getDay()]})`;
+                    let details = [];
+                    if (record.allDay) { details.push('全天($550)'); }
+                    else {
+                        if (record.early) details.push('早($200)');
+                        if (record.m1)    details.push('上大($50)');
+                        if (record.mh)    details.push('MH($50)');
+                        if (record.lunch) details.push('午($200)');
+                        if (record.m2)    details.push('下大($50)');
+                    }
+                    if (record.htime_h) details.push('H導($550)');
+                    if (record.htime_m) details.push('M導($450)');
+                    text += `${dateText} : ${details.join(', ')} -> $${record.total}\n`;
+                    total += record.total;
+                }
                 curr.setDate(curr.getDate() + 1);
             }
-            
-            datesToExport.forEach(dateStr => {
-                const record = records[dateStr];
-                
-                if (record && record.total > 0 && record.confirmed) {
-                    hasData = true;
-                    const d = parseLocalString(dateStr);
-                    const dateText = `${d.getMonth() + 1}/${d.getDate()} (${days[d.getDay()]})`;
-                    const cardTotal = record.total;
-                    
-                    let details = [];
-                    if (record.allDay) {
-                        details.push('全天($550)');
-                    } else {
-                        if (record.early) details.push('早($200)');
-                        if (record.m1) details.push('上大($50)');
-                        if (record.mh) details.push('MH($50)');
-                        if (record.lunch) details.push('午($200)');
-                        if (record.m2) details.push('下大($50)');
-                    }
-                    if (record.htime_h) details.push('H導($550)');
-                    if (record.htime_m) details.push('M導($450)');
-                    text += `${dateText} : ${details.join(', ')} -> $${cardTotal}\n`;
-                    total += cardTotal;
-                }
-            });
         } else {
-            // scope === 'all'
             text = `代導費用結算\n期間: 所有已儲存紀錄\n\n`;
-            const sortedDates = Object.keys(records).sort();
-            
-            sortedDates.forEach(dateStr => {
+            Object.keys(records).sort().forEach(dateStr => {
                 const record = records[dateStr];
                 if (record && record.total > 0 && record.confirmed) {
                     hasData = true;
-                    
-                    // Construct localized date safely
                     const d = parseLocalString(dateStr);
                     const dateText = `${d.getMonth() + 1}/${d.getDate()} (${days[d.getDay()]})`;
-                    
-                    const cardTotal = record.total;
-                    
                     let details = [];
-                    if (record.allDay) {
-                        details.push('全天($550)');
-                    } else {
+                    if (record.allDay) { details.push('全天($550)'); }
+                    else {
                         if (record.early) details.push('早($200)');
-                        if (record.m1) details.push('上大($50)');
-                        if (record.mh) details.push('MH($50)');
+                        if (record.m1)    details.push('上大($50)');
+                        if (record.mh)    details.push('MH($50)');
                         if (record.lunch) details.push('午($200)');
-                        if (record.m2) details.push('下大($50)');
+                        if (record.m2)    details.push('下大($50)');
                     }
                     if (record.htime_h) details.push('H導($550)');
                     if (record.htime_m) details.push('M導($450)');
-                    text += `${dateText} : ${details.join(', ')} -> $${cardTotal}\n`;
-                    total += cardTotal;
+                    text += `${dateText} : ${details.join(', ')} -> $${record.total}\n`;
+                    total += record.total;
                 }
             });
         }
-        
+
         if (!hasData) return null;
         text += `\n總計金額: $${total.toLocaleString()}`;
         return text;
     }
 
+    // ─── Share handlers ────────────────────────────────────────────────────
     shareLineBtn.addEventListener('click', () => {
         const text = getExportText();
-        if (!text) { alert('目前沒有可匯出的紀錄'); closeExportSheet(); return; }
-        
-        // LINE URL Scheme for sharing text
-        const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
-        window.open(lineUrl, '_blank');
-        closeExportSheet();
+        if (!text) { alert('目前沒有可匯出的紀錄'); return; }
+        window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`, '_blank');
+        closePreviewSheet();
     });
 
     copyTextBtn.addEventListener('click', () => {
         const text = getExportText();
-        if (!text) { alert('目前沒有可匯出的紀錄'); closeExportSheet(); return; }
-
-        navigator.clipboard.writeText(text).then(() => {
-            alert('已將明細複製到剪貼簿！');
-        }).catch(() => {
-            alert('複製失敗，請稍後再試。');
-        });
-        closeExportSheet();
+        if (!text) { alert('目前沒有可匯出的紀錄'); return; }
+        navigator.clipboard.writeText(text)
+            .then(() => alert('已將明細複製到剪貼簿！'))
+            .catch(() => alert('複製失敗，請稍後再試。'));
+        closePreviewSheet();
     });
 
     nativeShareBtn.addEventListener('click', () => {
         const text = getExportText();
-        if (!text) { alert('目前沒有可匯出的紀錄'); closeExportSheet(); return; }
-
+        if (!text) { alert('目前沒有可匯出的紀錄'); return; }
         if (navigator.share) {
-            navigator.share({
-                title: '代導費用明細',
-                text: text
-            }).catch(console.error);
+            navigator.share({ title: '代導費用明細', text }).catch(console.error);
         } else {
             alert('您的瀏覽器不支援原生分享功能，請使用複製功能。');
         }
-        closeExportSheet();
+        closePreviewSheet();
     });
+
+
+
+
+
+
 
     function formatDateStr(date) {
         return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;

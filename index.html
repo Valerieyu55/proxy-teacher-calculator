@@ -76,34 +76,63 @@
                         <span class="total-label">總計</span>
                         <span class="total-amount" id="grand-total">$0</span>
                     </div>
-                    <button id="export-btn" class="solid-white-btn"><i class="ph-bold ph-export"></i> 匯出明細</button>
+                    <button id="export-btn" class="solid-white-btn"><i class="ph-bold ph-eye"></i> 查看明細</button>
                 </div>
             </div>
 
-            <!-- Export Action Sheet -->
+            <!-- Preview Action Sheet (unified) -->
             <div id="sheet-overlay" class="glass-overlay"></div>
-            <div id="export-action-sheet" class="glass-sheet action-sheet">
+            <div id="preview-action-sheet" class="glass-sheet action-sheet preview-sheet">
                 <div class="sheet-body action-body">
-                    <h3 class="group-title" style="text-align: center; margin: 8px 0 16px 0;">選擇匯出範圍</h3>
+
+                    <!-- Header -->
+                    <div class="preview-sheet-header">
+                        <h3 class="preview-sheet-title">費用明細</h3>
+                        <button id="preview-close-btn" class="preview-close-btn"><i class="ph-bold ph-x"></i></button>
+                    </div>
+
+                    <!-- Scope toggle -->
                     <div class="glass-segmented mb-3">
-                        <input type="radio" name="export-scope" id="scope-custom" value="custom" checked>
-                        <label for="scope-custom" class="seg-btn">指定區間</label>
-                        <input type="radio" name="export-scope" id="scope-all" value="all">
-                        <label for="scope-all" class="seg-btn">所有已儲存</label>
+                        <input type="radio" name="preview-scope" id="preview-scope-all" value="all" checked>
+                        <label for="preview-scope-all" class="seg-btn">全部明細</label>
+                        <input type="radio" name="preview-scope" id="preview-scope-custom" value="custom">
+                        <label for="preview-scope-custom" class="seg-btn">指定區間</label>
                         <div class="seg-indicator"></div>
                     </div>
 
-                    <div id="export-calendar-container" class="calendar-container mb-3" style="display: flex; justify-content: center;">
-                        <input type="text" id="export-date-picker" style="display: none;">
+                    <!-- Calendar (shown only for 指定區間) -->
+                    <div id="preview-calendar-container" class="calendar-container mb-3" style="display:none; justify-content:center;">
+                        <input type="text" id="preview-date-picker" style="display:none;">
                     </div>
 
-                    <button id="share-line-btn" class="action-btn text-line"><i class="ph-fill ph-chat-circle-text"></i> 傳送到 LINE</button>
-                    <button id="copy-text-btn" class="action-btn"><i class="ph-bold ph-copy"></i> 複製文字明細</button>
-                    <button id="native-share-btn" class="action-btn"><i class="ph-bold ph-share-network"></i> 其他分享方式</button>
-                    <button id="cancel-action-btn" class="action-btn cancel-btn mt-2">取消</button>
+                    <!-- Summary banner -->
+                    <div class="preview-summary-banner">
+                        <div class="preview-summary-label">合計金額</div>
+                        <div class="preview-summary-amount" id="preview-total-amount">$0</div>
+                        <div class="preview-summary-sub" id="preview-date-range">所有已儲存紀錄</div>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="preview-empty-state" class="preview-empty-state" style="display:none;">
+                        <i class="ph-bold ph-file-dashed"></i>
+                        <p>此範圍內沒有已儲存的紀錄</p>
+                    </div>
+
+                    <!-- Records list -->
+                    <div class="preview-records-list" id="preview-records-list"></div>
+
+                    <!-- Share buttons -->
+                    <div class="preview-share-section" id="preview-share-section">
+                        <p class="preview-share-label">匯出方式</p>
+                        <button id="share-line-btn" class="action-btn text-line"><i class="ph-fill ph-chat-circle-text"></i> 傳送到 LINE</button>
+                        <button id="copy-text-btn" class="action-btn"><i class="ph-bold ph-copy"></i> 複製文字明細</button>
+                        <button id="native-share-btn" class="action-btn"><i class="ph-bold ph-share-network"></i> 其他分享方式</button>
+                    </div>
+
                 </div>
             </div>
             
+
         </div>
     </div>
 
